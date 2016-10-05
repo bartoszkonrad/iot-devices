@@ -5,21 +5,20 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Switch.h>
-#include "ClickButton.h"
 
 #define ONE_WIRE_BUS D3
 
-const byte lvrBtnPin = D1;
-const byte bdrBtnPin = D2;
+const byte bdrBtnPin = D1;
+const byte lvrBtnPin = D2;
 
 const char* ssid = "kolasz_iot";
 const char* password = "neV3na4E";
 
-const byte lvrPin0 = D0;
-const byte lvrPin1 = D5;
+const byte lvrPin0 = D6;
+const byte lvrPin1 = D7;
 
-const byte bdrPin0 = D6;
-const byte bdrPin1 = D7;
+const byte bdrPin0 = D5;
+const byte bdrPin1 = D0;
 
 Switch lvrBtn = Switch(lvrBtnPin);
 Switch bdrBtn = Switch(bdrBtnPin);
@@ -48,7 +47,6 @@ void setup() {
   WiFi.begin(ssid, password);
   Serial.println("");
 
-  // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -64,6 +62,8 @@ void setup() {
   }
 
   server.on("/", handleRoot);
+  server.on("/light", handleLight);
+  server.on("/temp", handleTemp);
 
   server.on("/loff", [](){
     server.send(200, "text/plain", "lON");
@@ -108,7 +108,6 @@ void setup() {
 
   server.begin();
   Serial.println("HTTP server started");
-
 }
 
 void loop() {
@@ -140,7 +139,6 @@ void loop() {
     digitalWrite(lvrPin1, LOW);
   }
 
-
   if (bdrBtn.pushed()) {
     Serial.println("pushed bdr");
   }
@@ -159,7 +157,26 @@ void loop() {
 }
 
 void handleRoot() {
-  server.send(200, "text/plain", "IoT rooms driver");
+  String payload = "";
+  DS18B20.requestTemperatures();
+  delay(1000);
+  payload = "Bedroom temperature: " + String(DS18B20.getTempCByIndex(0));
+  payload += "\n";
+  payload += "Living room temperature: " + String(DS18B20.getTempCByIndex(1));
+  payload += "\nState logic inverted (HIGH means OFF and so on)";
+  payload += "\nbdr0: ";
+  payload += String(digitalRead(bdrPin0));
+  payload += "\nbdr1: ";
+  payload += String(digitalRead(bdrPin1));
+  payload += "\nlvr0: ";
+  payload += String(digitalRead(lvrPin0));
+  payload += "\nlvr1: ";
+  payload += String(digitalRead(lvrPin1));
+  payload += "\n";
+  payload += "<a href=\"http://rooms.lan/light?bdr=1\">Turn ON bedroom</a>";
+  payload += "\n";
+  payload += "<a href=\"http://rooms.lan/light?bdr=0\">Turn OFF bedroom</a>";
+  server.send(200, "text/plain", payload);
   Serial.println("root");
 }
 
@@ -176,4 +193,86 @@ void handleNotFound(){
     message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
   server.send(404, "text/plain", message);
+}
+
+void handleLight() {
+  String payload = "lamps driver";
+  if(server.hasArg("bdr0")) {
+    int state = server.arg("bdr0").toInt();
+    if (state == 0) {
+      digitalWrite(bdrPin0, HIGH);
+    } else {
+      digitalWrite(bdrPin0, LOW);
+    }
+    Serial.println("Bedroom lamp0");
+  }
+  if(server.hasArg("bdr1")) {
+    int state = server.arg("bdr1").toInt();
+    if (state == 0) {
+      digitalWrite(bdrPin1, HIGH);
+    } else {
+      digitalWrite(bdrPin1, LOW);
+    }    Serial.println("Bedroom lamp1");
+  }
+  if(server.hasArg("bdr")) {
+    int state = server.arg("bdr").toInt();
+    if (state == 0) {
+      digitalWrite(bdrPin0, HIGH);
+      digitalWrite(bdrPin1, HIGH);
+    } else {
+      digitalWrite(bdrPin0, LOW);
+      digitalWrite(bdrPin1, LOW);
+    }
+    Serial.println("Both bedroom lamps");
+  }
+  if(server.hasArg("lvr0")) {
+    int state = server.arg("lvr0").toInt();
+    if (state == 0) {
+      digitalWrite(lvrPin0, HIGH);
+    } else {
+      digitalWrite(lvrPin0, LOW);
+    }
+    Serial.println("Living room lamp0");
+  }
+  if(server.hasArg("lvr1")) {
+    int state = server.arg("lvr1").toInt();
+    if (state == 0) {
+      digitalWrite(lvrPin1, HIGH);
+    } else {
+      digitalWrite(lvrPin1, LOW);
+    }
+    Serial.println("Living room lamp1");
+  }
+  if(server.hasArg("lvr")) {
+    int state = server.arg("lvr").toInt();
+    if (state == 0) {
+      digitalWrite(lvrPin0, HIGH);
+      digitalWrite(lvrPin1, HIGH);
+    } else {
+      digitalWrite(lvrPin0, LOW);
+      digitalWrite(lvrPin1, LOW);
+    }
+    Serial.println("Both living room lamps");
+  }
+  Serial.println(payload);
+  server.send(200, "text/plain", payload);
+}
+
+void handleTemp() {
+  String payload = "temperature sensor";
+  if(server.hasArg("temp")) {
+    String room = server.arg("temp");
+    Serial.println("Temperature request");
+    DS18B20.requestTemperatures();
+    delay(1000);
+    if (room == "bdr"){
+      payload = String(DS18B20.getTempCByIndex(0));
+    } else if (room == "lvr") {
+      payload = String(DS18B20.getTempCByIndex(1));
+    } else {
+      payload = "not found requested sensor";
+    }
+  }
+  Serial.println(payload);
+  server.send(200, "text/plain", payload);
 }
