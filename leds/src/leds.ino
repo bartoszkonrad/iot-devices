@@ -8,7 +8,7 @@ const char* ssid = "kolasz_iot";
 
 const byte kitchenPin = D5;
 const byte rgbPin = D6;
-const byte bathroomPin = D7;
+const byte bathroomPin = D0;
 
 const byte atxPowerPin = D1;
 const byte atxStatePin = A0;
@@ -29,7 +29,7 @@ void setup() {
   pinMode(atxStatePin, INPUT);
 
   digitalWrite(kitchenPin, LOW);
-  digitalWrite(rgbPin, LOW);
+  digitalWrite(rgbPin, HIGH);
   digitalWrite(bathroomPin, LOW);
   digitalWrite(atxPowerPin, HIGH);
 
@@ -71,10 +71,10 @@ void handleRoot() {
   payload += String(bathroomPWM);
   payload += "\nrgb: ";
   payload += String(digitalRead(rgbPin));
-  payload += "\natx power: ";
-  payload += String(digitalRead(atxPowerPin));
   payload += "\natx state: ";
-  payload += String(analogRead(atxStatePin));
+  payload += String(getAtxState());
+  payload += "\natx status: ";
+  payload += String(getAtxStatus());
   payload += "\n";
   payload += "\"http://leds.lan/leds?kitchen=0\" 0-1023";
   payload += "\n";
@@ -151,4 +151,18 @@ void handleLeds() {
 
   Serial.println(payload);
   server.send(200, "text/plain", payload);
+}
+
+bool getAtxStatus(){
+  if (analogRead(atxStatePin) > 100) {
+    return 1;
+  }
+  return 0;
+}
+
+bool getAtxState(){
+  if (digitalRead(atxPowerPin)) {
+    return 0;
+  }
+  return 1;
 }
