@@ -7,14 +7,20 @@ const char* password = "neV3na4E";
 const char* ssid = "kolasz_iot";
 
 const byte kitchenPin = D5;
-const byte rgbPin = D6;
-const byte bathroomPin = D0;
+const byte bathroomPin = D6;
 
 const byte atxPowerPin = D1;
 const byte atxStatePin = A0;
 
+bool kitchenAtxLock = 0;
+bool bathroomAtxLock = 0;
+bool rgbAtxLock = 0;
+
 int bathroomPWM = 0;
 int kitchenPWM = 0;
+
+int brightness = 0;
+int state = 0;
 
 ESP8266WebServer server(80);
 
@@ -23,13 +29,11 @@ void setup() {
   Serial.println("IoT");
 
   pinMode(kitchenPin, OUTPUT);
-  pinMode(rgbPin, OUTPUT);
   pinMode(bathroomPin, OUTPUT);
   pinMode(atxPowerPin, OUTPUT);
   pinMode(atxStatePin, INPUT);
 
   digitalWrite(kitchenPin, LOW);
-  digitalWrite(rgbPin, HIGH);
   digitalWrite(bathroomPin, LOW);
   digitalWrite(atxPowerPin, HIGH);
 
@@ -61,6 +65,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  checkAtxLock();
 }
 
 void handleRoot() {
@@ -69,20 +74,17 @@ void handleRoot() {
   payload += String(kitchenPWM);
   payload += "\nbathroom: ";
   payload += String(bathroomPWM);
-  payload += "\nrgb: ";
-  payload += String(digitalRead(rgbPin));
-  payload += "\natx state: ";
+  payload += "\nkitchenAtxLock: ";
+  payload += String(kitchenAtxLock);
+  payload += "\nbathroomAtxLock: ";
+  payload += String(bathroomAtxLock);
+  payload += "\nrgbAtxLock: ";
+  payload += String(rgbAtxLock);
+  payload += "\natxState: ";
   payload += String(getAtxState());
-  payload += "\natx status: ";
+  payload += "\natxStatus: ";
   payload += String(getAtxStatus());
-  payload += "\n";
-  payload += "\"http://leds.lan/leds?kitchen=0\" 0-1023";
-  payload += "\n";
-  payload += "\"http://leds.lan/leds?bathroom=0\" 0-1023";
-  payload += "\n";
-  payload += "\"http://leds.lan/leds?rgb=0\" 0/1";
-  payload += "\n";
-  payload += "\"http://leds.lan/leds?atx=0\" 0/1";
+
   server.send(200, "text/plain", payload);
   Serial.println("root");
 }
@@ -103,43 +105,65 @@ void handleNotFound(){
 }
 
 void handleLeds() {
-  String payload = "leds driver";
+  String payload = "leds and atx driver";
 
   if(server.hasArg("kitchen")) {
-    int brightness = server.arg("kitchen").toInt();
-    if (brightness < 0) brightness = 0;
-    if (brightness > 1023) brightness = 1023;
+    brightness = server.arg("kitchen").toInt();
+    if (brightness <= 0) {
+      brightness = 0;
+      kitchenAtxLock = 0;
+    }
+    if (brightness > 1023) {
+      brightness = 1023;
+    }
+    if (brightness > 0) {
+      kitchenAtxLock = 1;
+    }
     kitchenPWM = brightness;
     analogWrite(kitchenPin, brightness);
     Serial.println("kitchen leds set");
     payload = "kitchen leds set";
-  } else if(server.hasArg("bathroom")) {
-    int brightness = server.arg("bathroom").toInt();
-    if (brightness < 0) brightness = 0;
-    if (brightness > 1023) brightness = 1023;
+    } else if(server.hasArg("bathroom")) {
+    brightness = server.arg("bathroom").toInt();
+    if (brightness <= 0) {
+      brightness = 0;
+      bathroomAtxLock = 0;
+    }
+    if (brightness > 1023) {
+      brightness = 1023;
+    }
+    if (brightness > 0) {
+      bathroomAtxLock = 1;
+    }
     bathroomPWM = brightness;
     analogWrite(bathroomPin, brightness);
     Serial.println("bathroom leds set");
     payload = "bathroom leds set";
-  } else if(server.hasArg("rgb")) {
-    int state = server.arg("rgb").toInt();
+    } else if(server.hasArg("rgb")) {
+    state = server.arg("rgb").toInt();
     if (state == 0) {
-      digitalWrite(rgbPin, LOW);
+      rgbAtxLock = 0;
       Serial.println("rgb power off");
       payload = "rgb power off";
     } else {
-      digitalWrite(rgbPin, HIGH);
+      rgbAtxLock = 1;
       Serial.println("rgb power on");
       payload = "rgb power on";
     }
   } else if(server.hasArg("atx")) {
-    int state = server.arg("atx").toInt();
+    state = server.arg("atx").toInt();
     if (state == 0) {
       digitalWrite(atxPowerPin, HIGH);
+      rgbAtxLock = 0;
+      bathroomAtxLock = 0;
+      kitchenAtxLock = 0;
       Serial.println("atx power off");
       payload = "atx power off";
     } else {
       digitalWrite(atxPowerPin, LOW);
+      rgbAtxLock = 1;
+      bathroomAtxLock = 1;
+      kitchenAtxLock = 1;
       Serial.println("atx power on");
       payload = "atx power on";
     }
@@ -165,4 +189,12 @@ bool getAtxState(){
     return 0;
   }
   return 1;
+}
+
+void checkAtxLock(){
+  if (kitchenAtxLock || bathroomAtxLock || rgbAtxLock){
+    digitalWrite(atxPowerPin, LOW);
+  } else {
+    digitalWrite(atxPowerPin, HIGH);
+  }
 }

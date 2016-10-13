@@ -1,6 +1,5 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-// #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -11,7 +10,7 @@ const int sleepSeconds = 300;
 
 const byte dbVCC = 4;
 
-const int adc = A0;
+// const int adc = A0;
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature DS18B20(&oneWire);
@@ -29,14 +28,13 @@ void setup() {
   Serial.println("\n\nWake up");
   blink();
 
-  pinMode(adc, INPUT);
+  // pinMode(adc, INPUT);
 
   pinMode(dbVCC, OUTPUT);
   digitalWrite(dbVCC, HIGH);
 
   pinMode(BUILTIN_LED, OUTPUT);
 
-  // connect 16 to RST to wake up
   pinMode(16, WAKEUP_PULLUP);
 
   WiFi.begin(ssid, password);
@@ -64,8 +62,8 @@ void setup() {
   String url = "/outdoor";
   url += "?temp=";
   url += getTemperature();
-  url += "?vref=";
-  url += String(analogRead(adc));
+  // url += "&v=";
+  // url += String(analogRead(adc));
 
   Serial.print("Requesting URL: ");
   Serial.println(url);
@@ -77,7 +75,6 @@ void setup() {
   blink();
   Serial.println("Going to sleep");
 
-  // convert to microseconds
   ESP.deepSleep(sleepSeconds * 1000000);
 }
 
