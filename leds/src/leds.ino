@@ -70,9 +70,9 @@ void loop() {
 
 void handleRoot() {
   String payload = "";
-  payload += "kitchen: ";
+  payload += "kitchenLed: ";
   payload += String(kitchenPWM);
-  payload += "\nbathroom: ";
+  payload += "\nbathroomLed: ";
   payload += String(bathroomPWM);
   payload += "\nkitchenAtxLock: ";
   payload += String(kitchenAtxLock);
