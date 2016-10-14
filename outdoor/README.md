@@ -1,6 +1,7 @@
-# iot-out  
+# iot-out.lan
 
 ## ESP-01 with DB18B20  
+outdoor temperature sensor
 
 ### awake state  
 wake up and measure temp, then send to server  

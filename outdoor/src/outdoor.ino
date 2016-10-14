@@ -17,7 +17,7 @@ const char* password = "neV3na4E";
 
 WiFiClient client;
 const int httpPort = 80;
-const char* host = "192.168.1.1";
+const char* host = "rpi.lan";
 
 void setup() {
   Serial.begin(9600);
@@ -55,8 +55,8 @@ void setup() {
   Serial.println(url);
 
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" +
-               "Connection: close\r\n\r\n");
+                "Host: " + host + "\r\n" +
+                "Connection: close\r\n\r\n");
 
   Serial.println("Going to sleep");
 
