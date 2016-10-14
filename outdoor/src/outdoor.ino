@@ -4,13 +4,9 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-const int sleepSeconds = 300;
+const int sleepSeconds = 600;
 
-#define ONE_WIRE_BUS 14
-
-const byte dbVCC = 4;
-
-// const int adc = A0;
+#define ONE_WIRE_BUS 2
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature DS18B20(&oneWire);
@@ -21,19 +17,11 @@ const char* password = "neV3na4E";
 
 WiFiClient client;
 const int httpPort = 80;
-const char* host = "rpi.lan";
+const char* host = "192.168.1.1";
 
 void setup() {
   Serial.begin(9600);
   Serial.println("\n\nWake up");
-  blink();
-
-  // pinMode(adc, INPUT);
-
-  pinMode(dbVCC, OUTPUT);
-  digitalWrite(dbVCC, HIGH);
-
-  pinMode(BUILTIN_LED, OUTPUT);
 
   pinMode(16, WAKEUP_PULLUP);
 
@@ -62,8 +50,6 @@ void setup() {
   String url = "/outdoor";
   url += "?temp=";
   url += getTemperature();
-  // url += "&v=";
-  // url += String(analogRead(adc));
 
   Serial.print("Requesting URL: ");
   Serial.println(url);
@@ -72,7 +58,6 @@ void setup() {
                "Host: " + host + "\r\n" +
                "Connection: close\r\n\r\n");
 
-  blink();
   Serial.println("Going to sleep");
 
   ESP.deepSleep(sleepSeconds * 1000000);
@@ -89,15 +74,4 @@ String getTemperature() {
   temp = DS18B20.getTempCByIndex(0);
   dtostrf(temp, 2, 1, temperatureString);
   return temperatureString;
-}
-
-void blink() {
-  // LED: LOW = on, HIGH = off
-  for (int i = 0; i < 2; i++)
-  {
-    digitalWrite(BUILTIN_LED, LOW);
-    delay(100);
-    digitalWrite(BUILTIN_LED, HIGH);
-    delay(100);
-  }
 }
