@@ -125,7 +125,7 @@ void handleNotFound(){
 }
 
 void handleLeds() {
-  String payload = "";
+  String payload = "leds driver";
 
   if(server.hasArg("kitchen")) {
     brightness = server.arg("kitchen").toInt();
@@ -142,7 +142,8 @@ void handleLeds() {
     kitchenPWM = brightness;
     analogWrite(kitchenPin, brightness);
     payload = String(kitchenPWM);
-  } else if(server.hasArg("bathroom")) {
+  }
+  if(server.hasArg("bathroom")) {
     brightness = server.arg("bathroom").toInt();
     if (brightness <= 0) {
       brightness = 0;
@@ -157,7 +158,8 @@ void handleLeds() {
     bathroomPWM = brightness;
     analogWrite(bathroomPin, brightness);
     payload = String(bathroomPWM);
-  } else if(server.hasArg("bedroomrgb")) {
+  }
+  if(server.hasArg("bedroomrgb")) {
     state = server.arg("bedroomrgb").toInt();
     if (state == 0) {
       bedroomRgbAtxLock = 0;
@@ -166,7 +168,8 @@ void handleLeds() {
       bedroomRgbAtxLock = 1;
       payload = "bedroomrgblockon";
     }
-  } else if(server.hasArg("livingroomrgb")) {
+  }
+  if(server.hasArg("livingroomrgb")) {
     state = server.arg("livingroomrgb").toInt();
     if (state == 0) {
       livingroomRgbAtxLock = 0;
@@ -175,7 +178,8 @@ void handleLeds() {
       livingroomRgbAtxLock = 1;
       payload = "livingroomrgblockon";
     }
-  } else if(server.hasArg("atx")) {
+  }
+  if(server.hasArg("atx")) {
     state = server.arg("atx").toInt();
     if (state == 0) {
       digitalWrite(atxPowerPin, HIGH);
@@ -192,9 +196,6 @@ void handleLeds() {
       kitchenAtxLock = 1;
       payload = "atxpoweron";
     }
-  }
-  else {
-    payload = "parameter not found";
   }
 
   Serial.println(payload);

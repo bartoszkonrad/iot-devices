@@ -20,6 +20,11 @@ const byte lvrPin1 = D7;
 const byte bdrPin0 = D5;
 const byte bdrPin1 = D0;
 
+char lvrTempString[5];
+char bdrTempString[5];
+
+int httpStatusCode;
+
 Switch lvrBtn = Switch(lvrBtnPin);
 Switch bdrBtn = Switch(bdrBtnPin);
 
@@ -64,45 +69,7 @@ void setup() {
   server.on("/", handleRoot);
   server.on("/light", handleLight);
   server.on("/temp", handleTemp);
-
-  server.on("/loff", [](){
-    server.send(200, "text/plain", "lON");
-    Serial.println("ON");
-    digitalWrite(lvrPin0, HIGH);
-    digitalWrite(lvrPin1, HIGH);
-  });
-
-  server.on("/lon", [](){
-    server.send(200, "text/plain", "lOFF");
-    Serial.println("OFF");
-    digitalWrite(lvrPin0, LOW);
-    digitalWrite(lvrPin1, LOW);
-  });
-
-  server.on("/boff", [](){
-    server.send(200, "text/plain", "bON");
-    Serial.println("ON");
-    digitalWrite(bdrPin0, HIGH);
-    digitalWrite(bdrPin1, HIGH);
-  });
-
-  server.on("/bon", [](){
-    server.send(200, "text/plain", "bOFF");
-    Serial.println("OFF");
-    digitalWrite(bdrPin0, LOW);
-    digitalWrite(bdrPin1, LOW);
-  });
-
-  server.on("/temp", [](){
-    DS18B20.requestTemperatures();
-    delay(1000);
-    String s = String(DS18B20.getTempCByIndex(0));
-    s += "\n";
-    s += String(DS18B20.getTempCByIndex(1));
-    server.send(200, "text/plain", s);
-    Serial.println(DS18B20.getTempCByIndex(0));
-    Serial.println(DS18B20.getTempCByIndex(1));
-  });
+  server.on("/info", handleInfo);
 
   server.onNotFound(handleNotFound);
 
@@ -119,13 +86,13 @@ void loop() {
   if (lvrBtn.switched()) {
     Serial.println("switched lvr");
   }
-  // if (lvrBtn.released()) {
-  //   Serial.println("released lvt");
-  // }
+  if (lvrBtn.released()) {
+    Serial.println("released lvt");
+  }
 
-  // if (lvrBtn.pushed()) {
-    // Serial.println("pushed lvr");
-  // }
+  if (lvrBtn.pushed()) {
+    Serial.println("pushed lvr");
+  }
 
   if (lvrBtn.longPress()) {
     Serial.println("longPress lvr");
@@ -158,26 +125,42 @@ void loop() {
 
 void handleRoot() {
   String payload = "";
+  httpStatusCode = 200;
+
   DS18B20.requestTemperatures();
-  delay(1000);
-  payload = "Bedroom temperature: " + String(DS18B20.getTempCByIndex(0));
+  delay(800);
+  dtostrf(DS18B20.getTempCByIndex(0), 2, 1, bdrTempString);
+  dtostrf(DS18B20.getTempCByIndex(1), 2, 1, lvrTempString);
+  // payload = "bdrTemp: " + String(DS18B20.getTempCByIndex(0));
+  payload = "bdrTemp: " + String(bdrTempString);
   payload += "\n";
-  payload += "Living room temperature: " + String(DS18B20.getTempCByIndex(1));
-  payload += "\nState logic inverted (HIGH means OFF and so on)";
+  // payload += "lvrTemp: " + String(DS18B20.getTempCByIndex(1));
+  payload += "lvrTemp: " + String(lvrTempString);
   payload += "\nbdr0: ";
-  payload += String(digitalRead(bdrPin0));
+  payload += digitalRead(bdrPin0)?"0":"1";
   payload += "\nbdr1: ";
-  payload += String(digitalRead(bdrPin1));
+  payload += digitalRead(bdrPin1)?"0":"1";
   payload += "\nlvr0: ";
-  payload += String(digitalRead(lvrPin0));
+  payload += digitalRead(lvrPin0)?"0":"1";
   payload += "\nlvr1: ";
-  payload += String(digitalRead(lvrPin1));
-  payload += "\n";
-  payload += "<a href=\"http://rooms.lan/light?bdr=1\">Turn ON bedroom</a>";
-  payload += "\n";
-  payload += "<a href=\"http://rooms.lan/light?bdr=0\">Turn OFF bedroom</a>";
-  server.send(200, "text/plain", payload);
-  Serial.println("root");
+  payload += digitalRead(lvrPin1)?"0":"1";
+
+  server.send(httpStatusCode, "text/plain", payload);
+}
+
+void handleInfo() {
+  String payload = "";
+  httpStatusCode = 200;
+
+  payload += "available parameters (/light?): \n";
+  payload += "'bdr' (0|1)\n";
+  payload += "'bdr0' (0|1)\n";
+  payload += "'bdr1' (0|1)\n";
+  payload += "'lvr' (0|1)\n";
+  payload += "'lvr0' (0|1)\n";
+  payload += "'lvr1' (0|1)\n";
+
+  server.send(httpStatusCode, "text/plain", payload);
 }
 
 void handleNotFound(){
@@ -197,6 +180,8 @@ void handleNotFound(){
 
 void handleLight() {
   String payload = "lamps driver";
+  httpStatusCode = 200;
+
   if(server.hasArg("bdr0")) {
     int state = server.arg("bdr0").toInt();
     if (state == 0) {
@@ -204,7 +189,7 @@ void handleLight() {
     } else {
       digitalWrite(bdrPin0, LOW);
     }
-    Serial.println("Bedroom lamp0");
+    payload = digitalRead(bdrPin0)?"0":"1";
   }
   if(server.hasArg("bdr1")) {
     int state = server.arg("bdr1").toInt();
@@ -212,8 +197,9 @@ void handleLight() {
       digitalWrite(bdrPin1, HIGH);
     } else {
       digitalWrite(bdrPin1, LOW);
-    }    Serial.println("Bedroom lamp1");
   }
+  payload = digitalRead(bdrPin1)?"0":"1";
+}
   if(server.hasArg("bdr")) {
     int state = server.arg("bdr").toInt();
     if (state == 0) {
@@ -223,7 +209,7 @@ void handleLight() {
       digitalWrite(bdrPin0, LOW);
       digitalWrite(bdrPin1, LOW);
     }
-    Serial.println("Both bedroom lamps");
+    payload = (digitalRead(bdrPin0) && digitalRead(bdrPin1))?"0":"1";
   }
   if(server.hasArg("lvr0")) {
     int state = server.arg("lvr0").toInt();
@@ -232,7 +218,7 @@ void handleLight() {
     } else {
       digitalWrite(lvrPin0, LOW);
     }
-    Serial.println("Living room lamp0");
+    payload = digitalRead(lvrPin0)?"0":"1";
   }
   if(server.hasArg("lvr1")) {
     int state = server.arg("lvr1").toInt();
@@ -241,7 +227,7 @@ void handleLight() {
     } else {
       digitalWrite(lvrPin1, LOW);
     }
-    Serial.println("Living room lamp1");
+    payload = digitalRead(lvrPin1)?"0":"1";
   }
   if(server.hasArg("lvr")) {
     int state = server.arg("lvr").toInt();
@@ -252,27 +238,33 @@ void handleLight() {
       digitalWrite(lvrPin0, LOW);
       digitalWrite(lvrPin1, LOW);
     }
-    Serial.println("Both living room lamps");
+    payload = (digitalRead(lvrPin0) && digitalRead(lvrPin1))?"0":"1";
   }
-  Serial.println(payload);
-  server.send(200, "text/plain", payload);
+
+  server.send(httpStatusCode, "text/plain", payload);
 }
 
 void handleTemp() {
-  String payload = "temperature sensor";
-  if(server.hasArg("temp")) {
-    String room = server.arg("temp");
-    Serial.println("Temperature request");
+  String payload = "temperature, select sensor ?sensor=bdr|lvr";
+  httpStatusCode = 200;
+
+  if(server.hasArg("sensor")) {
+    String room = server.arg("sensor");
     DS18B20.requestTemperatures();
-    delay(1000);
+    delay(800);
     if (room == "bdr"){
-      payload = String(DS18B20.getTempCByIndex(0));
+      dtostrf(DS18B20.getTempCByIndex(0), 2, 1, bdrTempString);
+      // payload = String(DS18B20.getTempCByIndex(0));
+      payload = bdrTempString;
     } else if (room == "lvr") {
-      payload = String(DS18B20.getTempCByIndex(1));
+      dtostrf(DS18B20.getTempCByIndex(1), 2, 1, lvrTempString);
+      // payload = String(DS18B20.getTempCByIndex(1));
+      payload = lvrTempString;
     } else {
       payload = "not found requested sensor";
+      httpStatusCode = 400;
     }
   }
-  Serial.println(payload);
-  server.send(200, "text/plain", payload);
+
+  server.send(httpStatusCode, "text/plain", payload);
 }
