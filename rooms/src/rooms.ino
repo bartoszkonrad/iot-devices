@@ -4,7 +4,7 @@
 #include <ESP8266mDNS.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <Switch.h>
+#include <ClickButton.h>
 
 #define ONE_WIRE_BUS D3
 
@@ -25,15 +25,21 @@ char bdrTempString[5];
 
 int httpStatusCode;
 
-Switch lvrBtn = Switch(lvrBtnPin);
-Switch bdrBtn = Switch(bdrBtnPin);
-
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature DS18B20(&oneWire);
 
+ClickButton bdrBtn(bdrBtnPin, LOW, CLICKBTN_PULLUP);
+ClickButton lvrBtn(lvrBtnPin, LOW, CLICKBTN_PULLUP);
+
+WiFiClient client;
+const int httpPort = 80;
+const char* host = "iot-atx.lan";
+
 ESP8266WebServer server(80);
 
+
 void setup() {
+
   Serial.begin(9600);
   Serial.println("IoT");
 
@@ -79,47 +85,82 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  lvrBtn.poll();
-  bdrBtn.poll();
 
-  // other available options
-  if (lvrBtn.switched()) {
-    Serial.println("switched lvr");
-  }
-  if (lvrBtn.released()) {
-    Serial.println("released lvt");
-  }
+  bdrBtn.Update();
+  lvrBtn.Update();
 
-  if (lvrBtn.pushed()) {
-    Serial.println("pushed lvr");
-  }
-
-  if (lvrBtn.longPress()) {
-    Serial.println("longPress lvr");
-    digitalWrite(lvrPin0, HIGH);
-    digitalWrite(lvrPin1, HIGH);
+  if (bdrBtn.clicks == 1) {
+    if (!digitalRead(bdrPin0) || !digitalRead(bdrPin1)) {// reversed logic, false mean on
+      digitalWrite(bdrPin0, HIGH);
+      digitalWrite(bdrPin1, HIGH);
+    } else {
+      digitalWrite(bdrPin0, LOW);
+    }
+    Serial.println("single");
   }
 
-  if (lvrBtn.doubleClick()) {
-    Serial.println("doubleClick lvr");
-    digitalWrite(lvrPin0, LOW);
-    digitalWrite(lvrPin1, LOW);
+  if (bdrBtn.clicks == 2) {
+    if (!digitalRead(bdrPin1)) {
+      digitalWrite(bdrPin1, HIGH);
+    } else if (digitalRead(bdrPin0) || digitalRead(bdrPin1)) {
+      digitalWrite(bdrPin0, LOW);
+      digitalWrite(bdrPin1, LOW);
+    }
+    Serial.println("double");
   }
 
-  if (bdrBtn.pushed()) {
-    Serial.println("pushed bdr");
+  // blink even faster if triple clicked
+  if (bdrBtn.clicks == 3) {
+    if (!client.connect(host, httpPort)) {
+      Serial.println("connection failed");
+      return;
+    }
+
+    String url = "/leds";
+    url += "?bdrrgb=2";
+
+    client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+    "Host: " + host + "\r\n" +
+    "Connection: close\r\n\r\n");
+
+    Serial.println("triple");
   }
 
-  if (bdrBtn.longPress()) {
-    Serial.println("longPress bdr");
-    digitalWrite(bdrPin0, HIGH);
-    digitalWrite(bdrPin1, HIGH);
+  if (lvrBtn.clicks == 1) {
+    if (!digitalRead(lvrPin0) || !digitalRead(lvrPin1)) {// reversed logic, false mean on
+      digitalWrite(lvrPin0, HIGH);
+      digitalWrite(lvrPin1, HIGH);
+    } else {
+      digitalWrite(lvrPin0, LOW);
+    }
+    Serial.println("single");
   }
 
-  if (bdrBtn.doubleClick()) {
-    Serial.println("doubleClick bdr");
-    digitalWrite(bdrPin0, LOW);
-    digitalWrite(bdrPin1, LOW);
+  if (lvrBtn.clicks == 2) {
+    if (!digitalRead(lvrPin1)) {
+      digitalWrite(lvrPin1, HIGH);
+    } else if (digitalRead(lvrPin0) || digitalRead(lvrPin1)) {
+      digitalWrite(lvrPin0, LOW);
+      digitalWrite(lvrPin1, LOW);
+    }
+    Serial.println("double");
+  }
+
+  // blink even faster if triple clicked
+  if (lvrBtn.clicks == 3) {
+    if (!client.connect(host, httpPort)) {
+      Serial.println("connection failed");
+      return;
+    }
+
+    String url = "/leds";
+    url += "?lvrrgb=2";
+
+    client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+    "Host: " + host + "\r\n" +
+    "Connection: close\r\n\r\n");
+
+    Serial.println("triple");
   }
 }
 

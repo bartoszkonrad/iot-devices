@@ -6,19 +6,19 @@
 const char* password = "neV3na4E";
 const char* ssid = "kolasz_iot";
 
-const byte kitchenPin = D5;
-const byte bathroomPin = D6;
+const byte kthPin = D5;
+const byte bthPin = D6;
 
 const byte atxPowerPin = D1;
 const byte atxStatePin = A0;
 
-bool kitchenAtxLock = 0;
-bool bathroomAtxLock = 0;
-bool bedroomRgbAtxLock = 0;
-bool livingroomRgbAtxLock = 0;
+bool kthAtxLock = 0;
+bool bthAtxLock = 0;
+bool bdrRgbAtxLock = 0;
+bool lvrRgbAtxLock = 0;
 
-int bathroomPWM = 0;
-int kitchenPWM = 0;
+int bthPWM = 0;
+int kthPWM = 0;
 
 int brightness = 0;
 int state = 0;
@@ -29,15 +29,15 @@ void setup() {
   Serial.begin(9600);
   Serial.println("IoT");
 
-  pinMode(kitchenPin, OUTPUT);
-  pinMode(bathroomPin, OUTPUT);
+  pinMode(kthPin, OUTPUT);
+  pinMode(bthPin, OUTPUT);
   pinMode(atxPowerPin, OUTPUT);
 
   pinMode(atxStatePin, INPUT);
 
   // make sure that led strips are off on startup
-  digitalWrite(kitchenPin, LOW);
-  digitalWrite(bathroomPin, LOW);
+  digitalWrite(kthPin, LOW);
+  digitalWrite(bthPin, LOW);
 
   digitalWrite(atxPowerPin, HIGH);
 
@@ -75,18 +75,18 @@ void loop() {
 
 void handleRoot() {
   String payload = "";
-  payload += "kitchenPwm: ";
-  payload += String(kitchenPWM);
-  payload += "\nbathroomPwm: ";
-  payload += String(bathroomPWM);
-  payload += "\nkitchenAtxLock: ";
-  payload += String(kitchenAtxLock);
-  payload += "\nbathroomAtxLock: ";
-  payload += String(bathroomAtxLock);
-  payload += "\nbedroomRgbAtxLock: ";
-  payload += String(bedroomRgbAtxLock);
-  payload += "\nlivingroomRgbAtxLock: ";
-  payload += String(livingroomRgbAtxLock);
+  payload += "kthPwm: ";
+  payload += String(kthPWM);
+  payload += "\nbthPwm: ";
+  payload += String(bthPWM);
+  payload += "\nkthAtxLock: ";
+  payload += String(kthAtxLock);
+  payload += "\nbthAtxLock: ";
+  payload += String(bthAtxLock);
+  payload += "\nbdrRgbAtxLock: ";
+  payload += String(bdrRgbAtxLock);
+  payload += "\nlvrRgbAtxLock: ";
+  payload += String(lvrRgbAtxLock);
   payload += "\natxState: ";
   payload += String(getAtxState());
   payload += "\natxStatus: ";
@@ -99,10 +99,10 @@ void handleRoot() {
 void handleInfo() {
   String payload = "";
   payload += "available parameters (/leds?): \n";
-  payload += "'kitchen' (0-1023)\n";
-  payload += "'bathroom' (0-1023)\n";
-  payload += "'bedroomrgb' (0|1)\n";
-  payload += "'livingroomrgb' (0|1)\n";
+  payload += "'kth' (0-1023)\n";
+  payload += "'bth' (0-1023)\n";
+  payload += "'bdrrgb' (0|1)\n";
+  payload += "'lvrrgb' (0|1)\n";
   payload += "'atx' (0|1)\n";
 
   server.send(200, "text/plain", payload);
@@ -127,73 +127,79 @@ void handleNotFound(){
 void handleLeds() {
   String payload = "leds driver";
 
-  if(server.hasArg("kitchen")) {
-    brightness = server.arg("kitchen").toInt();
+  if(server.hasArg("kth")) {
+    brightness = server.arg("kth").toInt();
     if (brightness <= 0) {
       brightness = 0;
-      kitchenAtxLock = 0;
+      kthAtxLock = 0;
     }
     if (brightness > 1023) {
       brightness = 1023;
     }
     if (brightness > 0) {
-      kitchenAtxLock = 1;
+      kthAtxLock = 1;
     }
-    kitchenPWM = brightness;
-    analogWrite(kitchenPin, brightness);
-    payload = String(kitchenPWM);
+    kthPWM = brightness;
+    analogWrite(kthPin, brightness);
+    payload = String(kthPWM);
   }
-  if(server.hasArg("bathroom")) {
-    brightness = server.arg("bathroom").toInt();
+  if(server.hasArg("bth")) {
+    brightness = server.arg("bth").toInt();
     if (brightness <= 0) {
       brightness = 0;
-      bathroomAtxLock = 0;
+      bthAtxLock = 0;
     }
     if (brightness > 1023) {
       brightness = 1023;
     }
     if (brightness > 0) {
-      bathroomAtxLock = 1;
+      bthAtxLock = 1;
     }
-    bathroomPWM = brightness;
-    analogWrite(bathroomPin, brightness);
-    payload = String(bathroomPWM);
+    bthPWM = brightness;
+    analogWrite(bthPin, brightness);
+    payload = String(bthPWM);
   }
-  if(server.hasArg("bedroomrgb")) {
-    state = server.arg("bedroomrgb").toInt();
+  if(server.hasArg("bdrrgb")) {
+    state = server.arg("bdrrgb").toInt();
     if (state == 0) {
-      bedroomRgbAtxLock = 0;
-      payload = "bedroomrgblockoff";
-    } else {
-      bedroomRgbAtxLock = 1;
-      payload = "bedroomrgblockon";
+      bdrRgbAtxLock = 0;
+      payload = "bdrrgblockoff";
+    } else if (state == 1) {
+      bdrRgbAtxLock = 1;
+      payload = "bdrrgblockon";
+    } else if (state == 2) {
+      bdrRgbAtxLock = !bdrRgbAtxLock
+      payload = "toggled";
     }
   }
-  if(server.hasArg("livingroomrgb")) {
-    state = server.arg("livingroomrgb").toInt();
+  if(server.hasArg("lvrrgb")) {
+    state = server.arg("lvrrgb").toInt();
     if (state == 0) {
-      livingroomRgbAtxLock = 0;
-      payload = "livingroomrgblockoff";
-    } else {
-      livingroomRgbAtxLock = 1;
-      payload = "livingroomrgblockon";
+      lvrRgbAtxLock = 0;
+      payload = "lvrrgblockoff";
+    } else if (state == 1) {
+      lvrRgbAtxLock = 1;
+      payload = "lvrrgblockon";
+    } else if (state == 2) {
+      lvrRgbAtxLock = !lvrRgbAtxLock
+      payload = "toggled";
     }
   }
   if(server.hasArg("atx")) {
     state = server.arg("atx").toInt();
     if (state == 0) {
       digitalWrite(atxPowerPin, HIGH);
-      bedroomRgbAtxLock = 0;
-      livingroomRgbAtxLock = 0;
-      bathroomAtxLock = 0;
-      kitchenAtxLock = 0;
+      bdrRgbAtxLock = 0;
+      lvrRgbAtxLock = 0;
+      bthAtxLock = 0;
+      kthAtxLock = 0;
       payload = "atxpoweroff";
     } else {
       digitalWrite(atxPowerPin, LOW);
-      bedroomRgbAtxLock = 1;
-      livingroomRgbAtxLock = 1;
-      bathroomAtxLock = 1;
-      kitchenAtxLock = 1;
+      bdrRgbAtxLock = 1;
+      lvrRgbAtxLock = 1;
+      bthAtxLock = 1;
+      kthAtxLock = 1;
       payload = "atxpoweron";
     }
   }
@@ -217,7 +223,7 @@ bool getAtxState(){
 }
 
 void checkAtxLock(){
-  if (kitchenAtxLock || bathroomAtxLock || bedroomRgbAtxLock || livingroomRgbAtxLock){
+  if (kthAtxLock || bthAtxLock || bdrRgbAtxLock || lvrRgbAtxLock){
     digitalWrite(atxPowerPin, LOW);
   } else {
     digitalWrite(atxPowerPin, HIGH);
