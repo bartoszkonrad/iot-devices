@@ -168,7 +168,7 @@ void handleLeds() {
       bdrRgbAtxLock = 1;
       payload = "bdrrgblockon";
     } else if (state == 2) {
-      bdrRgbAtxLock = !bdrRgbAtxLock
+      bdrRgbAtxLock = !bdrRgbAtxLock;
       payload = "toggled";
     }
   }
@@ -181,7 +181,7 @@ void handleLeds() {
       lvrRgbAtxLock = 1;
       payload = "lvrrgblockon";
     } else if (state == 2) {
-      lvrRgbAtxLock = !lvrRgbAtxLock
+      lvrRgbAtxLock = !lvrRgbAtxLock;
       payload = "toggled";
     }
   }

@@ -40,7 +40,7 @@ ESP8266WebServer server(80);
 
 void setup() {
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("IoT");
 
   pinMode(lvrPin0, OUTPUT);
@@ -54,6 +54,14 @@ void setup() {
 
   digitalWrite(bdrPin0, HIGH);
   digitalWrite(bdrPin1, HIGH);
+
+  bdrBtn.debounceTime   = 4;
+  bdrBtn.multiclickTime = 300;
+  bdrBtn.longClickTime  = 600;
+
+  lvrBtn.debounceTime   = 4;
+  lvrBtn.multiclickTime = 300;
+  lvrBtn.longClickTime  = 600;
 
   WiFi.begin(ssid, password);
   Serial.println("");
@@ -96,7 +104,7 @@ void loop() {
     } else {
       digitalWrite(bdrPin0, LOW);
     }
-    Serial.println("single");
+    Serial.println("bdr single");
   }
 
   if (bdrBtn.clicks == 2) {
@@ -106,11 +114,11 @@ void loop() {
       digitalWrite(bdrPin0, LOW);
       digitalWrite(bdrPin1, LOW);
     }
-    Serial.println("double");
+    Serial.println("bdr double");
   }
 
   // blink even faster if triple clicked
-  if (bdrBtn.clicks == 3) {
+  if (bdrBtn.clicks == -1) {
     if (!client.connect(host, httpPort)) {
       Serial.println("connection failed");
       return;
@@ -123,7 +131,7 @@ void loop() {
     "Host: " + host + "\r\n" +
     "Connection: close\r\n\r\n");
 
-    Serial.println("triple");
+    Serial.println("bdr hold");
   }
 
   if (lvrBtn.clicks == 1) {
@@ -133,7 +141,7 @@ void loop() {
     } else {
       digitalWrite(lvrPin0, LOW);
     }
-    Serial.println("single");
+    Serial.println("lvr single");
   }
 
   if (lvrBtn.clicks == 2) {
@@ -143,11 +151,11 @@ void loop() {
       digitalWrite(lvrPin0, LOW);
       digitalWrite(lvrPin1, LOW);
     }
-    Serial.println("double");
+    Serial.println("lvr double");
   }
 
   // blink even faster if triple clicked
-  if (lvrBtn.clicks == 3) {
+  if (lvrBtn.clicks == -1) {
     if (!client.connect(host, httpPort)) {
       Serial.println("connection failed");
       return;
@@ -160,7 +168,7 @@ void loop() {
     "Host: " + host + "\r\n" +
     "Connection: close\r\n\r\n");
 
-    Serial.println("triple");
+    Serial.println("lvr hold");
   }
 }
 
@@ -169,7 +177,7 @@ void handleRoot() {
   httpStatusCode = 200;
 
   DS18B20.requestTemperatures();
-  delay(800);
+  delay(1000);
   dtostrf(DS18B20.getTempCByIndex(0), 2, 1, bdrTempString);
   dtostrf(DS18B20.getTempCByIndex(1), 2, 1, lvrTempString);
   // payload = "bdrTemp: " + String(DS18B20.getTempCByIndex(0));
@@ -292,7 +300,7 @@ void handleTemp() {
   if(server.hasArg("sensor")) {
     String room = server.arg("sensor");
     DS18B20.requestTemperatures();
-    delay(800);
+    delay(1000);
     if (room == "bdr"){
       dtostrf(DS18B20.getTempCByIndex(0), 2, 1, bdrTempString);
       // payload = String(DS18B20.getTempCByIndex(0));
